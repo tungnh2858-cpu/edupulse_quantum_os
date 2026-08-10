@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="vi" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduPulse Quantum OS - Hệ Thống Quản Trị Giáo Dục Tích Hợp AI</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2300f0ff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='10'></circle><path d='M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z'></path><path d='M2 12h20'></path></svg>">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { 50: '#f5f3ff', 100: '#ede9fe', 500: '#8b5cf6', 600: '#7c3aed', 700: '#6d28d9', 950: '#06040d' },
+                        cyber: { glowGreen: '#10b981', glowBlue: '#00f0ff', glowPink: '#ff007f', darkCard: 'rgba(15, 10, 35, 0.75)' }
+                    },
+                    fontFamily: { sans: ['Plus Jakarta Sans', 'Inter', 'sans-serif'], mono: ['Space Grotesk', 'monospace'] }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- ChartJS -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: rgba(13, 10, 30, 0.4); border-radius: 8px; }
+        ::-webkit-scrollbar-thumb { background: rgba(139, 92, 246, 0.5); border-radius: 8px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(0, 240, 255, 0.8); }
+
+        .glass-panel { background: rgba(15, 10, 35, 0.85); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px); border: 1px solid rgba(255, 255, 255, 0.08); }
+        
+        .avatar-initial {
+            background-color: #211b43; color: #ffffff; font-weight: 800; font-family: 'Plus Jakarta Sans', sans-serif;
+            border-radius: 12px; display: flex; align-items: center; justify-content: center; text-transform: uppercase;
+        }
+
+        * { cursor: none !important; }
+        #custom-cursor-dot { width: 8px; height: 8px; background: linear-gradient(135deg, #00f0ff, #ff007f); position: fixed; border-radius: 50%; z-index: 999999; pointer-events: none; transform: translate(-50%, -50%); transition: width 0.12s, height 0.12s; box-shadow: 0 0 10px rgba(0, 240, 255, 0.9); }
+        #custom-cursor-outline { width: 36px; height: 36px; border: 2px solid rgba(139, 92, 246, 0.6); position: fixed; border-radius: 50%; z-index: 999998; pointer-events: none; transform: translate(-50%, -50%); transition: transform 0.08s cubic-bezier(0.25, 1, 0.5, 1), border-color 0.2s, background-color 0.2s; }
+        
+        .glowing-bg-circle { position: absolute; border-radius: 50%; filter: blur(140px); z-index: 0; pointer-events: none; opacity: 0.2; transition: all 1s ease; }
+        input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+
+        .active-tab-style { background: rgba(255,255,255,0.1); color: white !important; border-left: 4px solid #00f0ff; }
+    </style>
+</head>
+<body class="bg-brand-950 text-slate-100 font-sans min-h-screen relative overflow-x-hidden transition-colors duration-300">
+
+    <div id="custom-cursor-dot"></div><div id="custom-cursor-outline"></div>
+    <div id="toast-notif-box" class="fixed top-6 right-6 z-[9999] flex flex-col gap-3 pointer-events-none"></div>
+
+    <!-- MÀN HÌNH ĐĂNG NHẬP -->
+    <div id="login-overlay" class="fixed inset-0 z-[1000] bg-brand-950 flex items-center justify-center p-4 backdrop-blur-xl">
+        <div class="glowing-bg-circle bg-cyan-500 w-[500px] h-[500px] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"></div>
+        <div class="glass-panel p-8 rounded-3xl w-full max-w-md shadow-2xl border border-white/10 relative z-10">
+            <div class="text-center mb-8">
+                <i class="fa-solid fa-atom text-cyan-400 text-5xl mb-4 drop-shadow-[0_0_15px_rgba(0,240,255,0.8)] animate-spin" style="animation-duration: 4s;"></i>
+                <h1 class="text-2xl font-black text-white tracking-tight">EduPulse Server</h1>
+                <p class="text-xs text-slate-400 mt-2">Hệ Thống Phân Quyền & Quản Trị (API Gateway)</p>
+            </div>
+            <form id="login-form" onsubmit="handleLogin(event)" class="space-y-4">
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Tài khoản truy cập</label>
+                    <input type="text" id="login-username" required class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white font-mono focus:border-cyan-500 focus:outline-none" placeholder="Nhập tên đăng nhập...">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Khóa bảo mật (Password)</label>
+                    <input type="password" id="login-password" required class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:border-cyan-500 focus:outline-none" placeholder="Nhập mật khẩu...">
+                </div>
+                <button type="submit" id="login-btn" class="w-full py-3.5 mt-2 bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-extrabold text-sm rounded-xl shadow-[0_0_20px_rgba(0,240,255,0.3)] transition-all flex justify-center items-center gap-2">
+                    <i class="fa-solid fa-right-to-bracket"></i> Đăng Nhập Hệ Thống
+                </button>
+            </form>
+            <div class="mt-6 text-center border-t border-white/10 pt-4">
+                <p class="text-[10px] text-slate-500">Chỉ Server Admin và tài khoản được cấp phép mới có thể truy cập Backend Gateway này.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="glowing-bg-circle bg-brand-600 w-[500px] h-[500px] -top-24 -left-24"></div>
+    <div class="glowing-bg-circle bg-cyan-500 w-[400px] h-[400px] bottom-10 right-10"></div>
+
+    <div class="flex h-screen relative z-10 overflow-hidden">
+        
+        <aside class="w-80 glass-panel border-r border-white/5 flex flex-col justify-between hidden lg:flex m-4 rounded-3xl overflow-hidden shadow-2xl transition-all" id="main-sidebar">
+            <div>
+                <div class="p-6 border-b border-white/5 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 flex items-center justify-center text-white font-extrabold text-2xl overflow-hidden">
+                            <i class="fa-solid fa-earth-americas text-cyan-400 text-3xl drop-shadow-[0_0_8px_rgba(0,240,255,0.8)]"></i>
+                        </div>
+                        <div class="flex flex-col">
+                            <span class="text-sm font-black text-slate-100 tracking-tight uppercase">EDUPULSE</span>
+                            <span class="text-[9px] text-cyan-400 font-bold tracking-widest uppercase block mt-0.5" id="user-role-display">Khách</span>
+                        </div>
+                    </div>
+                </div>
+
+                <nav class="p-4 space-y-1 overflow-y-auto max-h-[65vh]">
+                    <button onclick="switchTab('dashboard')" class="tab-link active-tab-style w-full flex items-center gap-4 px-4 py-3 rounded-2xl text-indigo-400 hover:text-white hover:bg-white/5 transition-all text-sm font-bold" data-tab="dashboard">
+                        <i class="fa-solid fa-shapes text-lg w-6 text-brand-500"></i> Bảng Điều Khiển
+                    </button>
+                    <!-- ADMIN ONLY TABS -->
+                    <div id="admin-nav-section" class="hidden">
+                        <div class="px-4 py-2 mt-2 text-[10px] font-black text-slate-500 uppercase tracking-widest">Admin Control</div>
+                        <button onclick="switchTab('accounts')" class="tab-link w-full flex items-center gap-4 px-4 py-3 rounded-2xl text-indigo-400 hover:text-white hover:bg-white/5 transition-all text-sm font-bold" data-tab="accounts">
+                            <i class="fa-solid fa-users-gear text-lg w-6 text-rose-500"></i> Quản Lý Tài Khoản
+                        </button>
+                        <button onclick="switchTab('academic')" class="tab-link w-full flex items-center gap-4 px-4 py-3 rounded-2xl text-indigo-400 hover:text-white hover:bg-white/5 transition-all text-sm font-bold" data-tab="academic">
+                            <i class="fa-solid fa-book-bookmark text-lg w-6 text-amber-500"></i> Cấu Hình Trường/Học Vụ
+                        </button>
+                    </div>
+
+                    <div class="px-4 py-2 mt-2 text-[10px] font-black text-slate-500 uppercase tracking-widest">Học Vụ</div>
+                    <button onclick="switchTab('classes')" class="tab-link w-full flex items-center gap-4 px-4 py-3 rounded-2xl text-indigo-400 hover:text-white hover:bg-white/5 transition-all text-sm font-bold" data-tab="classes">
+                        <i class="fa-solid fa-layer-group text-lg w-6"></i> Lớp Học & Khóa
+                    </button>
+                    <button onclick="switchTab('students')" class="tab-link w-full flex items-center gap-4 px-4 py-3 rounded-2xl text-indigo-400 hover:text-white hover:bg-white/5 transition-all text-sm font-bold" data-tab="students">
+                        <i class="fa-solid fa-user-graduate text-lg w-6"></i> Sinh Viên & Sổ Điểm
+                    </button>
+                    
+                    <div class="px-4 py-2 mt-2 text-[10px] font-black text-slate-500 uppercase tracking-widest">Tiện ích</div>
+                    <button onclick="switchTab('programming-lab')" class="tab-link w-full flex items-center gap-4 px-4 py-3 rounded-2xl text-indigo-400 hover:text-white hover:bg-white/5 transition-all text-sm font-bold" data-tab="programming-lab">
+                        <i class="fa-solid fa-code text-lg w-6 text-emerald-400"></i> AI IDE & Lập Trình
+                    </button>
+                </nav>
+            </div>
+            <div class="p-6 border-t border-white/5 space-y-4">
+                <div class="flex items-center justify-between text-xs font-bold text-slate-400 bg-white/5 p-3 rounded-xl">
+                    <span class="truncate w-32" id="current-username-display">User</span>
+                    <button onclick="handleLogout()" class="text-rose-400 hover:text-rose-300" title="Đăng xuất"><i class="fa-solid fa-power-off"></i></button>
+                </div>
+            </div>
+        </aside>
+
+        <main class="flex-1 flex flex-col overflow-y-auto p-4 lg:p-6 relative">
+            <header class="flex items-center justify-between mb-6 glass-panel p-4 rounded-3xl shadow-xl">
+                <div class="flex items-center gap-4">
+                    <button class="lg:hidden p-3 rounded-2xl bg-white/5 text-slate-200" onclick="toggleMobileNavbar()"><i class="fa-solid fa-bars"></i></button>
+                    <div>
+                        <h2 id="dynamic-tab-header-title" class="text-xl lg:text-2xl font-black text-slate-100 tracking-tight">Bảng Điều Khiển</h2>
+                        <p class="text-xs text-indigo-400 font-bold" id="clock-display">Loading...</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span id="token-status" class="text-[10px] font-mono px-3 py-1.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hidden md:inline"><i class="fa-solid fa-shield-check"></i> Token Active</span>
+                </div>
+            </header>
+
+            <!-- ================= TAB: DASHBOARD ================= -->
+            <section id="tab-dashboard" class="space-y-6 tab-content-view">
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="glass-panel p-5 rounded-3xl relative overflow-hidden"><div class="flex items-center justify-between"><span class="text-xs lg:text-sm font-bold text-slate-400">Tổng Học Sinh</span><span class="p-2.5 rounded-xl bg-brand-500/10 text-brand-400"><i class="fa-solid fa-users"></i></span></div><h3 class="text-2xl lg:text-3xl font-black text-slate-100 mt-4" id="stat-total-st">0</h3></div>
+                    <div class="glass-panel p-5 rounded-3xl relative overflow-hidden"><div class="flex items-center justify-between"><span class="text-xs lg:text-sm font-bold text-slate-400">Lớp Đào Tạo</span><span class="p-2.5 rounded-xl bg-cyan-500/10 text-cyan-400"><i class="fa-solid fa-school"></i></span></div><h3 class="text-2xl lg:text-3xl font-black text-slate-100 mt-4" id="stat-total-cl">0</h3></div>
+                    <div class="glass-panel p-5 rounded-3xl relative overflow-hidden"><div class="flex items-center justify-between"><span class="text-xs lg:text-sm font-bold text-slate-400">Tài Khoản H/t</span><span class="p-2.5 rounded-xl bg-pink-500/10 text-pink-400"><i class="fa-solid fa-user-shield"></i></span></div><h3 class="text-2xl lg:text-3xl font-black text-slate-100 mt-4" id="stat-total-acc">0</h3></div>
+                    <div class="glass-panel p-5 rounded-3xl relative overflow-hidden"><div class="flex items-center justify-between"><span class="text-xs lg:text-sm font-bold text-slate-400">Server Status</span><span class="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400"><i class="fa-solid fa-server"></i></span></div><h3 class="text-lg lg:text-xl font-black text-emerald-400 mt-4">ONLINE</h3></div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="lg:col-span-2 glass-panel p-6 rounded-3xl h-80 flex flex-col justify-between">
+                        <div><h4 class="text-sm font-extrabold text-white">Thống Kê Sinh Viên Theo Lớp</h4></div>
+                        <div class="flex-1 mt-2 relative"><canvas id="dashboard-chart"></canvas></div>
+                    </div>
+                    <div class="glass-panel p-6 rounded-3xl h-80 flex flex-col">
+                        <h4 class="text-sm font-extrabold text-white mb-4">Hoạt Động Gần Đây</h4>
+                        <div class="flex-1 overflow-y-auto space-y-3 pr-2 text-xs" id="activity-log">
+                            <div class="flex gap-3 text-slate-300"><i class="fa-solid fa-rocket text-cyan-400 mt-1"></i><p>Hệ thống Backend (In-Memory) đã khởi động.</p></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ================= TAB: QUẢN LÝ TÀI KHOẢN ================= -->
+            <section id="tab-accounts" class="space-y-6 tab-content-view hidden">
+                <div class="flex items-center justify-between bg-white/5 p-4 rounded-3xl border border-white/5">
+                    <div>
+                        <h3 class="text-base font-bold text-white"><i class="fa-solid fa-users-gear text-rose-500 mr-2"></i>Quản Trị Người Dùng (Virtual Server)</h3>
+                        <p class="text-[10px] text-slate-400">Tạo, sửa tài khoản và cấp phát phân quyền (Tags).</p>
+                    </div>
+                    <button onclick="openAccountModal()" class="px-4 py-2.5 bg-gradient-to-r from-rose-500 to-pink-600 text-white font-black text-xs rounded-xl shadow-md">
+                        <i class="fa-solid fa-user-plus mr-1.5"></i> Tạo Tài Khoản
+                    </button>
+                </div>
+                <div class="glass-panel rounded-3xl overflow-hidden shadow-2xl">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-sm">
+                            <thead>
+                                <tr class="border-b border-white/5 bg-white/5 text-slate-400 text-xs font-bold uppercase">
+                                    <th class="py-4 px-6">ID & Tên hiển thị</th>
+                                    <th class="py-4 px-6">Username Đăng Nhập</th>
+                                    <th class="py-4 px-6">Tag Quyền Hạn</th>
+                                    <th class="py-4 px-6 text-center">Thao Tác</th>
+                                </tr>
+                            </thead>
+                            <tbody id="accounts-table-body" class="divide-y divide-white/5"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ================= TAB: THIẾT LẬP HỌC VỤ ================= -->
+            <section id="tab-academic" class="space-y-6 tab-content-view hidden">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="glass-panel p-6 rounded-3xl space-y-4">
+                        <div class="flex justify-between items-center border-b border-white/5 pb-3">
+                            <div><h3 class="text-base font-bold text-white"><i class="fa-solid fa-school text-cyan-400 mr-2"></i>Quản Lý Trường Cơ Sở</h3></div>
+                        </div>
+                        <form onsubmit="addSchool(event)" class="flex gap-2">
+                            <input type="text" id="new-school-name" placeholder="Tên trường (VD: ĐH Bách Khoa)..." required class="flex-1 px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-xs text-white focus:outline-none">
+                            <button type="submit" class="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-xs rounded-xl transition-all shadow">Thêm</button>
+                        </form>
+                        <div class="overflow-y-auto max-h-48 space-y-2 pr-1" id="schools-list"></div>
+                    </div>
+
+                    <div class="glass-panel p-6 rounded-3xl space-y-4">
+                        <div class="flex justify-between items-center border-b border-white/5 pb-3">
+                            <div><h3 class="text-base font-bold text-white"><i class="fa-solid fa-book-open text-amber-400 mr-2"></i>Quản Lý Môn Học</h3></div>
+                        </div>
+                        <form onsubmit="addSubject(event)" class="flex gap-2">
+                            <input type="text" id="new-subject-name" placeholder="Tên môn học (VD: Lập trình C++)..." required class="flex-1 px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-xs text-white focus:outline-none">
+                            <button type="submit" class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl transition-all shadow">Thêm</button>
+                        </form>
+                        <div class="overflow-y-auto max-h-48 flex flex-wrap gap-2 pr-1" id="subjects-list"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ================= TAB: LỚP HỌC ================= -->
+            <section id="tab-classes" class="space-y-6 tab-content-view hidden">
+                <div class="flex flex-col md:flex-row items-start md:items-center justify-between bg-white/5 p-4 rounded-3xl border border-white/5 gap-4">
+                    <div><h3 class="text-base font-bold text-white">Quản Lý Khóa Lớp & Chuyên Ngành</h3></div>
+                    <button onclick="openClassModal()" class="px-4 py-2.5 bg-gradient-to-r from-brand-500 to-indigo-500 text-white font-black text-xs rounded-xl shadow-md admin-only">
+                        <i class="fa-solid fa-plus"></i> Tạo Lớp Mới
+                    </button>
+                </div>
+                <div id="classes-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+            </section>
+
+            <!-- ================= TAB: SINH VIÊN & ĐIỂM ================= -->
+            <section id="tab-students" class="space-y-6 tab-content-view hidden">
+                <div class="glass-panel p-5 rounded-3xl flex flex-col md:flex-row gap-4 justify-between items-center">
+                    <select id="filter-class-dropdown" onchange="renderStudents()" class="px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-slate-200 text-xs focus:outline-none w-full md:w-64">
+                        <option value="ALL">-- Tất cả lớp học --</option>
+                    </select>
+                    <button onclick="openStudentModal()" class="w-full md:w-auto px-5 py-2.5 bg-brand-500 hover:bg-brand-600 text-white font-extrabold text-xs rounded-xl shadow-md whitespace-nowrap">
+                        <i class="fa-solid fa-user-plus"></i> Thêm Sinh Viên & Nhập Điểm
+                    </button>
+                </div>
+
+                <div class="glass-panel rounded-3xl overflow-hidden shadow-2xl">
+                    <table class="w-full text-left text-sm">
+                        <thead>
+                            <tr class="bg-white/5 text-slate-400 text-xs font-bold uppercase border-b border-white/5">
+                                <th class="py-4 px-6">Sinh Viên</th>
+                                <th class="py-4 px-6">Mã SV</th>
+                                <th class="py-4 px-6">Lớp Thuộc Về</th>
+                                <th class="py-4 px-6 text-center">GPA</th>
+                                <th class="py-4 px-6 text-center">Thao Tác</th>
+                            </tr>
+                        </thead>
+                        <tbody id="students-table-body" class="divide-y divide-white/5"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- ================= TAB: AI PROGRAMMING LAB ================= -->
+            <section id="tab-programming-lab" class="space-y-6 tab-content-view hidden h-full">
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
+                    <div class="lg:col-span-8 glass-panel p-6 rounded-3xl flex flex-col h-full min-h-[500px]">
+                        <div class="flex items-center justify-between border-b border-white/5 pb-3 mb-4">
+                            <span class="text-xs font-mono text-emerald-400"><i class="fa-solid fa-code"></i> Quantum IDE Web Editor</span>
+                        </div>
+                        <textarea id="ide-editor" class="flex-1 w-full p-4 bg-brand-950 text-emerald-400 font-mono text-sm rounded-2xl border border-white/10 focus:outline-none focus:border-emerald-500 resize-none" spellcheck="false">console.log("Hello EduPulse Quantum OS!");</textarea>
+                        <div class="flex gap-2 justify-end mt-4">
+                            <button onclick="runVirtualCompiler()" class="px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-black text-xs rounded-xl shadow-lg"><i class="fa-solid fa-play mr-1.5"></i>Biên dịch & Chạy</button>
+                        </div>
+                    </div>
+                    <div class="lg:col-span-4 flex flex-col gap-4">
+                        <div class="glass-panel p-5 rounded-3xl flex-1 flex flex-col">
+                            <span class="text-xs font-mono text-slate-400 uppercase border-b border-white/5 pb-2 mb-2">Console Output</span>
+                            <div id="compiler-output" class="flex-1 p-3 bg-black/50 rounded-xl font-mono text-xs text-slate-300 overflow-y-auto"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- MODAL: ACCOUNT -->
+    <div id="modal-account" class="fixed inset-0 z-[500] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md opacity-0 pointer-events-none transition-opacity">
+        <div class="w-full max-w-md glass-panel rounded-3xl p-6 shadow-2xl">
+            <h3 class="text-base font-black text-white mb-4">Thiết Lập Tài Khoản Hệ Thống</h3>
+            <form onsubmit="saveAccount(event)" class="space-y-4 text-xs">
+                <input type="hidden" id="acc-edit-id">
+                <div><label class="block text-[10px] font-bold text-slate-400 mb-1">Tên Hiển Thị *</label><input type="text" id="acc-name" required class="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white"></div>
+                <div><label class="block text-[10px] font-bold text-slate-400 mb-1">Username (Dùng để đăng nhập) *</label><input type="text" id="acc-username" required class="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white font-mono"></div>
+                <div><label class="block text-[10px] font-bold text-slate-400 mb-1">Mật Khẩu *</label><input type="text" id="acc-password" required class="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white font-mono"></div>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 mb-1">Cấp Quyền (Tag) *</label>
+                    <select id="acc-role" required class="w-full px-3 py-2 bg-brand-950 border border-white/10 rounded-xl text-white">
+                        <option value="student">Học Sinh / Sinh Viên</option>
+                        <option value="teacher">Giáo Viên</option>
+                        <option value="admin">Quản Trị Viên (Admin)</option>
+                    </select>
+                </div>
+                <div class="flex justify-end gap-2 pt-4">
+                    <button type="button" onclick="closeModal('modal-account')" class="px-4 py-2 bg-white/5 rounded-xl text-slate-400">Hủy</button>
+                    <button type="submit" class="px-4 py-2 bg-rose-500 text-white font-bold rounded-xl shadow-md">Lưu Tài Khoản</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: CLASS -->
+    <div id="modal-class" class="fixed inset-0 z-[500] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md opacity-0 pointer-events-none transition-opacity">
+        <div class="w-full max-w-md glass-panel rounded-3xl p-6 shadow-2xl">
+            <h3 class="text-base font-black text-white mb-4">Tạo Lớp Học Mới</h3>
+            <form onsubmit="saveClass(event)" class="space-y-4 text-xs">
+                <div><label class="block text-[10px] font-bold text-slate-400 mb-1">Thuộc Trường *</label><select id="class-school" required class="w-full px-3 py-2 bg-brand-950 border border-white/10 rounded-xl text-white"></select></div>
+                <div><label class="block text-[10px] font-bold text-slate-400 mb-1">Tên Lớp (VD: 10A1, CNTT1) *</label><input type="text" id="class-name" required class="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white"></div>
+                <div class="flex justify-end gap-2 pt-4">
+                    <button type="button" onclick="closeModal('modal-class')" class="px-4 py-2 bg-white/5 rounded-xl text-slate-400">Hủy</button>
+                    <button type="submit" class="px-4 py-2 bg-brand-500 text-white font-bold rounded-xl shadow-md">Tạo Lớp</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: STUDENT & GRADES -->
+    <div id="modal-student" class="fixed inset-0 z-[500] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md opacity-0 pointer-events-none transition-opacity">
+        <div class="w-full max-w-4xl glass-panel rounded-3xl p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
+            <h3 class="text-lg font-black text-white mb-4">Hồ Sơ & Bảng Điểm Sinh Viên</h3>
+            <form onsubmit="saveStudent(event)">
+                <input type="hidden" id="student-edit-id">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs">
+                    <div class="space-y-4">
+                        <span class="text-xs font-bold text-brand-400 border-b border-white/5 pb-1 block">1. THÔNG TIN CHUNG</span>
+                        <div><label class="block text-slate-400 mb-1">Tên Sinh Viên *</label><input type="text" id="st-name" required class="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white font-bold"></div>
+                        <div><label class="block text-slate-400 mb-1">Mã SV *</label><input type="text" id="st-code" required class="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white"></div>
+                        <div><label class="block text-slate-400 mb-1">Lớp Học *</label><select id="st-class" required class="w-full px-3 py-2 bg-brand-950 border border-white/10 rounded-xl text-white"></select></div>
+                    </div>
+                    <div class="space-y-4">
+                        <span class="text-xs font-bold text-brand-400 border-b border-white/5 pb-1 block">2. MA TRẬN ĐIỂM (Hệ 10)</span>
+                        <div id="st-grades-container" class="space-y-2 bg-black/20 p-3 rounded-xl border border-white/5 max-h-48 overflow-y-auto">
+                            <!-- Grades injected here based on subjects -->
+                        </div>
+                    </div>
+                </div>
+                <div class="flex justify-end gap-2 pt-4 mt-4 border-t border-white/5">
+                    <button type="button" onclick="closeModal('modal-student')" class="px-4 py-2 bg-white/5 rounded-xl text-slate-400 text-xs">Hủy</button>
+                    <button type="submit" class="px-5 py-2 bg-brand-500 text-white font-bold rounded-xl shadow-md text-xs">Lưu Dữ Liệu</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // --- CUSTOM CURSOR ---
+        document.addEventListener('mousemove', (e) => {
+            const dot = document.getElementById('custom-cursor-dot');
+            const outline = document.getElementById('custom-cursor-outline');
+            if(dot && outline) {
+                dot.style.left = e.clientX + 'px'; dot.style.top = e.clientY + 'px';
+                outline.style.left = e.clientX + 'px'; outline.style.top = e.clientY + 'px';
+            }
+        });
+
+        // --- VIRTUAL DATABASE (IN-MEMORY) ---
+        const DB = {
+            users: [
+                {
+                    id: 'ADMIN1',
+                    username: 'tungnguyenADMIN12345678',
+                    password: 'Tunglaihoclaptrinhmobile@1142010ADMIN',
+                    role: 'admin',
+                    name: 'Tùng Nguyễn'
+                }
+            ],
+            schools: [ { id: 'SC1', name: 'Đại Học Công Nghệ' } ],
+            classes: [ { id: 'C1', schoolId: 'SC1', name: 'Khoa Học Máy Tính K65' } ],
+            subjects: [ 'Toán Cao Cấp', 'Lập Trình C++', 'Cơ Sở Dữ Liệu' ],
+            students: []
+        };
+
+        let currentUser = null;
+        let currentToken = null;
+        let dashboardChartInstance = null;
+
+        // --- UTILS ---
+        function generateId() { return Math.random().toString(36).substr(2, 9); }
+        
+        function showToast(msg, type='info') {
+            const box = document.getElementById('toast-notif-box');
+            const t = document.createElement('div');
+            const colors = { info: 'bg-blue-500/20 text-blue-300', success: 'bg-emerald-500/20 text-emerald-300', error: 'bg-rose-500/20 text-rose-300' };
+            t.className = `px-4 py-3 rounded-xl border border-white/10 backdrop-blur-md shadow-lg ${colors[type]} text-xs font-bold transition-all duration-300 opacity-0 translate-y-2`;
+            t.innerHTML = msg;
+            box.appendChild(t);
+            setTimeout(() => { t.classList.remove('opacity-0', 'translate-y-2'); }, 10);
+            setTimeout(() => { t.classList.add('opacity-0'); setTimeout(() => t.remove(), 300); }, 3000);
+        }
+
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('clock-display').innerText = now.toLocaleString('vi-VN');
+            if(currentUser) setTimeout(updateClock, 1000);
+        }
+
+        // --- AUTHENTICATION ---
+        function handleLogin(e) {
+            e.preventDefault();
+            const u = document.getElementById('login-username').value;
+            const p = document.getElementById('login-password').value;
+            const btn = document.getElementById('login-btn');
+            
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang xác thực...';
+            
+            setTimeout(() => {
+                const user = DB.users.find(x => x.username === u && x.password === p);
+                if(user) {
+                    currentUser = user;
+                    // Mock Access Token Generation
+                    currentToken = "eyJhbGciOiJIUzI1NiIsInR.mock." + btoa(user.username + Date.now());
+                    
+                    document.getElementById('login-overlay').style.display = 'none';
+                    showToast(`Xác thực thành công! Cấp phát Access Token cho ${user.role}`, 'success');
+                    initializeApp();
+                } else {
+                    showToast('Tài khoản hoặc mật khẩu không chính xác. Yêu cầu quyền Admin.', 'error');
+                    btn.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> Đăng Nhập Hệ Thống';
+                }
+            }, 800);
+        }
+
+        function handleLogout() {
+            currentUser = null; currentToken = null;
+            document.getElementById('login-overlay').style.display = 'flex';
+            document.getElementById('login-username').value = '';
+            document.getElementById('login-password').value = '';
+            document.getElementById('login-btn').innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> Đăng Nhập Hệ Thống';
+        }
+
+        // --- INITIALIZATION ---
+        function initializeApp() {
+            updateClock();
+            document.getElementById('user-role-display').innerText = currentUser.role;
+            document.getElementById('current-username-display').innerText = currentUser.name;
+            document.getElementById('token-status').classList.remove('hidden');
+
+            // Setup Role-based Access
+            document.querySelectorAll('.admin-only').forEach(el => {
+                el.style.display = currentUser.role === 'admin' ? '' : 'none';
+            });
+            if(currentUser.role === 'admin') {
+                document.getElementById('admin-nav-section').classList.remove('hidden');
+            }
+
+            // Bind Dropdowns
+            updateDropdowns();
+
+            // Render Views
+            renderAccounts();
+            renderSchools();
+            renderSubjects();
+            renderClasses();
+            renderStudents();
+            updateDashboard();
+
+            switchTab('dashboard');
+        }
+
+        function updateDropdowns() {
+            const classSelects = ['class-school', 'st-class', 'filter-class-dropdown'];
+            
+            // School dropdown in Class modal
+            let scHtml = DB.schools.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+            document.getElementById('class-school').innerHTML = scHtml || '<option value="">-- Tạo trường trước --</option>';
+
+            // Class dropdowns
+            let clHtml = DB.classes.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+            document.getElementById('st-class').innerHTML = clHtml || '<option value="">-- Tạo lớp trước --</option>';
+            document.getElementById('filter-class-dropdown').innerHTML = '<option value="ALL">-- Tất cả lớp học --</option>' + clHtml;
+        }
+
+        // --- UI NAVIGATION ---
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content-view').forEach(t => t.classList.add('hidden'));
+            document.querySelectorAll('.tab-link').forEach(l => l.classList.remove('active-tab-style'));
+            
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+            const activeBtn = document.querySelector(`.tab-link[data-tab="${tabId}"]`);
+            if(activeBtn) activeBtn.classList.add('active-tab-style');
+            
+            const titles = {
+                'dashboard': 'Bảng Điều Khiển Hệ Thống', 'accounts': 'Quản Lý Phân Quyền Tài Khoản',
+                'academic': 'Thiết Lập Cơ Sở Học Vụ', 'classes': 'Quản Lý Khóa & Lớp Học',
+                'students': 'Hồ Sơ Sinh Viên & Chấm Điểm', 'programming-lab': 'Quantum IDE Lập Trình'
+            };
+            document.getElementById('dynamic-tab-header-title').innerText = titles[tabId] || '';
+            if(window.innerWidth < 1024) document.getElementById('main-sidebar').classList.add('hidden');
+        }
+
+        function toggleMobileNavbar() {
+            const sb = document.getElementById('main-sidebar');
+            sb.classList.toggle('hidden'); sb.classList.toggle('absolute'); sb.classList.toggle('z-40');
+            sb.classList.toggle('bg-brand-950'); sb.classList.toggle('w-full'); sb.classList.toggle('h-full');
+        }
+
+        function openModal(id) {
+            const m = document.getElementById(id);
+            m.classList.remove('opacity-0', 'pointer-events-none');
+        }
+        function closeModal(id) {
+            const m = document.getElementById(id);
+            m.classList.add('opacity-0', 'pointer-events-none');
+        }
+
+
+        // --- ACCOUNT MANAGEMENT ---
+        function renderAccounts() {
+            const tbody = document.getElementById('accounts-table-body');
+            tbody.innerHTML = DB.users.map(u => `
+                <tr class="hover:bg-white/5">
+                    <td class="py-3 px-6"><span class="font-bold text-white block">${u.name}</span><span class="text-[10px] text-slate-500">${u.id}</span></td>
+                    <td class="py-3 px-6 font-mono text-cyan-400">${u.username}</td>
+                    <td class="py-3 px-6"><span class="px-2 py-1 rounded bg-white/10 text-[10px] uppercase font-bold ${u.role==='admin'?'text-rose-400':u.role==='teacher'?'text-amber-400':'text-blue-400'}">${u.role}</span></td>
+                    <td class="py-3 px-6 text-center">
+                        ${u.id !== 'ADMIN1' ? `<button onclick="deleteAccount('${u.id}')" class="text-rose-400 hover:text-rose-300"><i class="fa-solid fa-trash"></i></button>` : '<i class="fa-solid fa-lock text-slate-500"></i>'}
+                    </td>
+                </tr>
+            `).join('');
+            document.getElementById('stat-total-acc').innerText = DB.users.length;
+        }
+
+        function openAccountModal() {
+            document.getElementById('acc-edit-id').value = '';
+            document.getElementById('acc-name').value = '';
+            document.getElementById('acc-username').value = '';
+            document.getElementById('acc-password').value = '';
+            openModal('modal-account');
+        }
+
+        function saveAccount(e) {
+            e.preventDefault();
+            const id = document.getElementById('acc-edit-id').value;
+            const user = {
+                id: id || 'USR' + generateId(),
+                name: document.getElementById('acc-name').value,
+                username: document.getElementById('acc-username').value,
+                password: document.getElementById('acc-password').value,
+                role: document.getElementById('acc-role').value
+            };
+            if(!id) DB.users.push(user);
+            closeModal('modal-account');
+            renderAccounts();
+            showToast('Đã lưu tài khoản hệ thống.', 'success');
+        }
+
+        function deleteAccount(id) {
+            if(confirm('Bạn có chắc chắn xóa tài khoản này?')) {
+                DB.users = DB.users.filter(u => u.id !== id);
+                renderAccounts();
+            }
+        }
+
+        // --- ACADEMIC MANAGEMENT (Schools & Subjects) ---
+        function addSchool(e) {
+            e.preventDefault();
+            const name = document.getElementById('new-school-name').value;
+            DB.schools.push({ id: 'SC' + generateId(), name: name });
+            document.getElementById('new-school-name').value = '';
+            renderSchools(); updateDropdowns();
+        }
+        
+        function renderSchools() {
+            document.getElementById('schools-list').innerHTML = DB.schools.map(s => 
+                `<div class="p-2 bg-white/5 rounded-xl border border-white/10 text-xs text-slate-300 font-bold flex justify-between"><i class="fa-solid fa-building text-cyan-500 mr-2"></i> ${s.name}</div>`
+            ).join('');
+        }
+
+        function addSubject(e) {
+            e.preventDefault();
+            const name = document.getElementById('new-subject-name').value;
+            if(!DB.subjects.includes(name)) {
+                DB.subjects.push(name);
+                document.getElementById('new-subject-name').value = '';
+                renderSubjects();
+            }
+        }
+
+        function renderSubjects() {
+            document.getElementById('subjects-list').innerHTML = DB.subjects.map(s => 
+                `<span class="px-3 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-lg text-xs font-bold">${s}</span>`
+            ).join('');
+        }
+
+        // --- CLASSES MANAGEMENT ---
+        function openClassModal() { openModal('modal-class'); }
+        function saveClass(e) {
+            e.preventDefault();
+            const schoolId = document.getElementById('class-school').value;
+            if(!schoolId) return showToast('Vui lòng tạo trường trước!', 'error');
+            DB.classes.push({
+                id: 'CL' + generateId(),
+                schoolId: schoolId,
+                name: document.getElementById('class-name').value
+            });
+            closeModal('modal-class'); renderClasses(); updateDropdowns();
+            updateDashboard();
+            showToast('Tạo lớp học thành công', 'success');
+        }
+        
+        function renderClasses() {
+            const container = document.getElementById('classes-container');
+            container.innerHTML = DB.classes.map(c => {
+                const sCount = DB.students.filter(st => st.classId === c.id).length;
+                const school = DB.schools.find(s => s.id === c.schoolId)?.name || 'Unknown';
+                return `
+                <div class="glass-panel p-5 rounded-3xl border-t-4 border-t-brand-500">
+                    <h4 class="font-black text-white text-lg">${c.name}</h4>
+                    <p class="text-xs text-cyan-400 mb-4"><i class="fa-solid fa-location-dot"></i> ${school}</p>
+                    <div class="flex justify-between items-center text-xs">
+                        <span class="text-slate-400"><i class="fa-solid fa-users"></i> ${sCount} Sinh viên</span>
+                        <span class="px-2 py-1 bg-white/10 rounded font-mono">ID: ${c.id}</span>
+                    </div>
+                </div>`;
+            }).join('') || '<p class="text-xs text-slate-500">Chưa có dữ liệu lớp học.</p>';
+        }
+
+        // --- STUDENTS & GRADING ---
+        function renderStudentGradesInput() {
+            const container = document.getElementById('st-grades-container');
+            container.innerHTML = DB.subjects.map(sub => `
+                <div class="flex justify-between items-center text-xs">
+                    <span class="text-slate-300 w-1/2">${sub}</span>
+                    <input type="number" step="0.1" min="0" max="10" data-subject="${sub}" class="st-grade-input w-20 px-2 py-1 bg-brand-950 border border-white/10 rounded text-center text-white font-bold" placeholder="Điểm">
+                </div>
+            `).join('');
+        }
+
+        function openStudentModal() {
+            if(DB.classes.length === 0) return showToast('Hãy tạo lớp học trước!', 'error');
+            document.getElementById('st-name').value = '';
+            document.getElementById('st-code').value = '';
+            renderStudentGradesInput();
+            openModal('modal-student');
+        }
+
+        function saveStudent(e) {
+            e.preventDefault();
+            const gradesInputs = document.querySelectorAll('.st-grade-input');
+            let grades = {}; let total = 0; let count = 0;
+            gradesInputs.forEach(inp => {
+                const val = parseFloat(inp.value) || 0;
+                grades[inp.dataset.subject] = val;
+                total += val; count++;
+            });
+            const gpa = count > 0 ? (total/count).toFixed(2) : 0;
+
+            const st = {
+                id: 'ST' + generateId(),
+                name: document.getElementById('st-name').value,
+                code: document.getElementById('st-code').value,
+                classId: document.getElementById('st-class').value,
+                grades: grades,
+                gpa: parseFloat(gpa)
+            };
+            DB.students.push(st);
+            closeModal('modal-student');
+            renderStudents(); updateDashboard();
+            showToast('Lưu hồ sơ sinh viên thành công!', 'success');
+        }
+
+        function renderStudents() {
+            const filter = document.getElementById('filter-class-dropdown').value;
+            let list = DB.students;
+            if(filter !== 'ALL') list = list.filter(s => s.classId === filter);
+
+            document.getElementById('students-table-body').innerHTML = list.map(st => {
+                const cName = DB.classes.find(c => c.id === st.classId)?.name || '';
+                let gpaColor = st.gpa >= 8 ? 'text-emerald-400' : st.gpa >= 6.5 ? 'text-cyan-400' : st.gpa >= 5 ? 'text-yellow-400' : 'text-rose-400';
+                return `
+                <tr class="hover:bg-white/5">
+                    <td class="py-3 px-6 font-bold text-white">${st.name}</td>
+                    <td class="py-3 px-6 font-mono text-slate-400">${st.code}</td>
+                    <td class="py-3 px-6 text-indigo-300 text-xs">${cName}</td>
+                    <td class="py-3 px-6 text-center font-black ${gpaColor}">${st.gpa}</td>
+                    <td class="py-3 px-6 text-center">
+                        <button class="px-3 py-1 bg-white/10 rounded text-xs text-white hover:bg-white/20"><i class="fa-solid fa-eye"></i></button>
+                    </td>
+                </tr>`;
+            }).join('');
+        }
+
+        // --- DASHBOARD & CHARTS ---
+        function updateDashboard() {
+            document.getElementById('stat-total-st').innerText = DB.students.length;
+            document.getElementById('stat-total-cl').innerText = DB.classes.length;
+
+            const log = document.getElementById('activity-log');
+            log.innerHTML = `<div class="flex gap-3 text-slate-300"><i class="fa-solid fa-clock text-indigo-400 mt-1"></i><p>Dữ liệu được làm mới lúc ${new Date().toLocaleTimeString()}</p></div>` + log.innerHTML;
+
+            renderChart();
+        }
+
+        function renderChart() {
+            const ctx = document.getElementById('dashboard-chart');
+            if(!ctx) return;
+            
+            const classNames = DB.classes.map(c => c.name);
+            const studentCounts = DB.classes.map(c => DB.students.filter(s => s.classId === c.id).length);
+
+            if(dashboardChartInstance) dashboardChartInstance.destroy();
+
+            dashboardChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: classNames.length ? classNames : ['Chưa có DL'],
+                    datasets: [{
+                        label: 'Số sinh viên',
+                        data: classNames.length ? studentCounts : [0],
+                        backgroundColor: 'rgba(0, 240, 255, 0.5)',
+                        borderColor: '#00f0ff',
+                        borderWidth: 1,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { 
+                        y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8', stepSize: 1 } },
+                        x: { grid: { display: false }, ticks: { color: '#94a3b8' } }
+                    }
+                }
+            });
+        }
+
+        // --- IDE COMPILER ---
+        function runVirtualCompiler() {
+            const out = document.getElementById('compiler-output');
+            out.innerHTML = '<span class="text-yellow-400">Executing Quantum Environment...</span><br>';
+            
+            setTimeout(() => {
+                const code = document.getElementById('ide-editor').value;
+                out.innerHTML += `<span class="text-slate-400">$ node app.js</span><br>`;
+                try {
+                    // Cẩn thận với eval, đây chỉ là mô phỏng console.log
+                    let logCap = [];
+                    const originalLog = console.log;
+                    console.log = (...args) => logCap.push(args.join(' '));
+                    eval(code);
+                    console.log = originalLog;
+                    out.innerHTML += `<span class="text-emerald-400">${logCap.join('<br>')}</span><br><span class="text-slate-500">Process exited with code 0</span>`;
+                } catch(e) {
+                    out.innerHTML += `<span class="text-rose-500">Error: ${e.message}</span>`;
+                }
+            }, 600);
+        }
+    </script>
+</body>
+</html>
