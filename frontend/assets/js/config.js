@@ -14,4 +14,4 @@
  *
  * Ví dụ: window.EDUPULSE_API_BASE = 'https://edupulse-backend.onrender.com';
  */
-window.EDUPULSE_API_BASE = '';
+window.EDUPULSE_API_BASE = 'https://edupulse-backend-j5e6.onrender.com';
