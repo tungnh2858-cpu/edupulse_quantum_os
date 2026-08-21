@@ -1,0 +1,11 @@
+node_modules/
+backend/data/db.json
+backend/.env
+backend/uploads/avatars/*
+backend/uploads/logos/*
+backend/uploads/posts/*
+!backend/uploads/avatars/.gitkeep
+!backend/uploads/logos/.gitkeep
+!backend/uploads/posts/.gitkeep
+*.log
+.DS_Store
